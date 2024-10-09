@@ -10,52 +10,33 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query(sort: \Product.productName) private var products: [Product]
 
     var body: some View {
-        NavigationSplitView {
+        NavigationView {
             List {
-                ForEach(items) { item in
+                ForEach(products) { product in
                     NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
+                        DetailView(product: product)
                     } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                        AsyncImage(url: product.courseImageURL) { image in
+                            image.image?.resizable().aspectRatio(120/200, contentMode: .fit)
+                        }
+                        .frame(width: 120, height: 200, alignment: .leading)
+                        
+                        Text(product.productName)
                     }
                 }
             }
-        } detail: {
-            Text("Select an item")
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+        .task {
+            do {
+                let url = URL(string: "https://tgc-stg-m2-apps.s3.amazonaws.com/ioschallenge/homeitems/index.json")!
+                try await Product.configure(using: url, for: modelContext)
+            } catch {
+                
             }
         }
     }
-}
 
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
